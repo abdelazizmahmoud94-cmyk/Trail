@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Graphs</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:240px 1fr;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+aside{background:var(--panel);padding:16px;border-right:1px solid #334155;overflow-y:auto}
+main{padding:8px;overflow-y:auto;display:grid;gap:8px;grid-auto-rows:260px}
+.graph{background:var(--bg);border:1px solid #334155;border-radius:6px;padding:8px;display:flex;flex-direction:column}
+.graph-title{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.graph .plot{flex:1}
+.btn{display:block;width:100%;padding:8px 12px;margin-bottom:6px;background:var(--accent);color:#0f172a;border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase}
+.btn.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+h3{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #334155}
+h3:first-child{margin-top:0}
+select{width:100%;background:#0a0e1a;color:var(--text);border:1px solid #334155;border-radius:4px;padding:6px;font-size:11px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#38bdf8;">Graphs</span></h1>
+  <div style="display:flex;gap:12px;font-size:11px">
+    <label><input type="radio" name="units" value="imperial" checked onchange="setUnits('imperial')"> Imperial</label>
+    <label><input type="radio" name="units" value="metric" onchange="setUnits('metric')"> Metric</label>
+    <label>Duration:
+      <select id="duration" onchange="loadMain()" style="display:inline-block;width:auto;margin:0">
+        <option value="60">1m</option>
+        <option value="240" selected>4m</option>
+        <option value="900">15m</option>
+        <option value="3600">1h</option>
+      </select>
+    </label>
+  </div>
+</header>
+
+<aside>
+  <h3>Actions</h3>
+  <button class="btn" onclick="loadMain()">Load Main</button>
+  <button class="btn secondary" onclick="reload()">↻ Refresh</button>
+  <h3>Config</h3>
+  <div style="font-size:11px;color:var(--muted)">6 standard graph groups loaded</div>
+</aside>
+
+<main id="container">
+  <div style="color:var(--muted);text-align:center;padding:40px">Loading...</div>
+</main>
+
+<script>
+let UNITS = 'imperial';
+function setUnits(u){UNITS = u; loadMain();}
+
+async function loadMain(){
+  const duration = document.getElementById('duration')?.value || 240;
+  const r = await fetch(`/api/viz/graphs/main?duration_s=${duration}&units=${UNITS}`);
+  const d = await r.json();
+  render(d.graphs || []);
+}
+
+function render(graphs){
+  const c = document.getElementById('container');
+  if(!graphs.length){c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No data yet. Start API server.</div>';return;}
+  c.innerHTML = '';
+  graphs.forEach((g,i)=>{
+    const div = document.createElement('div');
+    div.className = 'graph';
+    div.innerHTML = `<div class="graph-title">${g.spec.title} <span style="color:var(--muted);font-size:10px">${g.spec.units} · ${g.spec.duration_s}s</span></div>
+      <div class="plot" id="plot-${i}"></div>`;
+    c.appendChild(div);
+    renderGraph(g, `plot-${i}`);
+  });
+}
+
+function renderGraph(g, id){
+  const traces = g.traces.map(t=>({type:'scatter',mode:'lines',x:t.x,y:t.y,name:t.name,line:{color:t.color,width:1.5}}));
+  Plotly.newPlot(id, traces, {
+    paper_bgcolor:'#0f172a',plot_bgcolor:'#0f172a',font:{color:'#cbd5e1',size:10},
+    margin:{l:50,r:20,t:10,b:30},
+    showlegend:true,legend:{orientation:'h',y:-0.15,font:{size:9}},
+    xaxis:{title:g.spec.x_unit,gridcolor:'#334155'},
+    yaxis:{gridcolor:'#334155',range:[g.range.y_min,g.range.y_max]},
+  },{responsive:true,displayModeBar:false});
+}
+
+function reload(){loadMain();}
+window.addEventListener('load',()=>{loadMain();setInterval(loadMain,5000);});
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Calibration Sandbox</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;--purple:#a78bfa;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:260px 1fr 340px;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+header .badge{background:var(--purple);color:#0f172a;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase}
+header .live-badge{background:var(--danger);color:#fff;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700}
+aside,main,.right-panel{overflow-y:auto;padding:16px;border-right:1px solid #334155}
+aside{background:var(--panel)}
+main{background:var(--bg)}
+.right-panel{background:var(--panel);border-right:none;border-left:1px solid #334155}
+h3{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #334155}
+h3:first-child{margin-top:0}
+.btn{display:inline-block;padding:6px 12px;background:var(--accent);color:#0f172a;border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;margin-right:6px;margin-bottom:6px}
+.btn:hover{background:#4de0ff}
+.btn.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.danger{background:var(--danger);color:#fff}
+.profile-item{background:var(--panel2);border-radius:4px;padding:8px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.profile-item:hover{background:#2f3e52}
+.profile-item.active{background:#0c4a6e;border-left-color:var(--accent)}
+.profile-item .name{font-weight:700;font-size:12px;display:flex;justify-content:space-between}
+.profile-item .name .builtin{font-size:9px;color:var(--purple);font-weight:400;text-transform:uppercase}
+.profile-item .desc{font-size:10px;color:var(--muted);margin-top:3px}
+.param-row{display:grid;grid-template-columns:1fr 80px 80px;gap:6px;align-items:center;padding:4px 0;font-size:11px;border-bottom:1px solid #334155}
+.param-row .name{color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis}
+.param-row .dflt{color:var(--muted);text-align:right}
+.param-row .curr{color:var(--accent);font-weight:700;text-align:right}
+.param-row.changed .curr{color:var(--ok)}
+.run-card{background:var(--panel2);border-radius:6px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--muted)}
+.run-card.best{border-left-color:var(--ok);background:#1a3a2e}
+.run-card .run-id{font-weight:700;color:var(--accent)}
+.run-card .score{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin:4px 0}
+.warn-banner{background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fcd34d;padding:10px 12px;border-radius:4px;font-size:11px;margin-bottom:12px}
+.warn-banner::before{content:"⚠ ";font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{color:var(--accent);text-align:left;padding:6px 4px;border-bottom:1px solid #334155}
+td{padding:5px 4px;border-bottom:1px solid #1e293b;font-variant-numeric:tabular-nums}
+tr.best-row{background:rgba(16,185,129,0.1)}
+.stat{display:flex;justify-content:space-between;padding:6px 8px;background:var(--panel2);border-radius:4px;margin-bottom:4px;font-size:11px}
+.stat .k{color:var(--muted)}
+.stat .v{font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#a78bfa;">Calibration Sandbox</span></h1>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span class="badge">Sandbox Mode</span>
+    <span class="live-badge">Live Untouched</span>
+  </div>
+</header>
+
+<aside>
+  <div class="warn-banner">Sandbox: changes here do not affect the live system.</div>
+  <h3>Profiles</h3>
+  <div id="profiles-list"></div>
+  <button class="btn secondary" onclick="loadProfiles()">↻ Refresh</button>
+  <button class="btn secondary" onclick="newProfile()">+ New</button>
+
+  <h3>Sandbox Wells</h3>
+  <div id="wells-list"></div>
+  <button class="btn secondary" onclick="loadWells()">↻ Reload</button>
+
+  <h3>Actions</h3>
+  <button class="btn" onclick="runSelected()">▶ Evaluate</button>
+  <button class="btn secondary" onclick="clearRuns()">Clear Runs</button>
+</aside>
+
+<main>
+  <h3>Selected Profile: <span id="selected-profile-name" style="color:var(--ok)">—</span></h3>
+  <div style="margin-bottom:12px">
+    <button class="btn" onclick="runSelected()">▶ Evaluate</button>
+    <button class="btn secondary" onclick="duplicateProfile()">⧉ Duplicate</button>
+    <button class="btn danger" onclick="deleteProfile()">🗑 Delete</button>
+  </div>
+  <h3>Parameters (Default vs Current)</h3>
+  <div id="params-list"></div>
+  <h3>Runs</h3>
+  <div id="runs-list"></div>
+</main>
+
+<div class="right-panel">
+  <h3>Comparison Summary</h3>
+  <div id="comparison-summary">—</div>
+  <h3>Per-Well (Best Run)</h3>
+  <div id="per-well-results">
+    <div style="color:var(--muted);font-size:11px;text-align:center;padding:20px">No runs yet.</div>
+  </div>
+</div>
+
+<script>
+const STATE = {profiles:[],wells:[],runs:[],selectedProfileId:null};
+
+async function loadProfiles(){
+  const r = await fetch('/api/calibration/profiles');
+  const d = await r.json();
+  STATE.profiles = d.profiles || [];
+  renderProfiles();
+}
+function renderProfiles(){
+  const el = document.getElementById('profiles-list');
+  el.innerHTML = STATE.profiles.map(p=>`
+    <div class="profile-item ${p.id===STATE.selectedProfileId?'active':''}" onclick="selectProfile('${p.id}')">
+      <div class="name"><span>${p.name}</span>${p.is_builtin?'<span class="builtin">Builtin</span>':''}</div>
+      <div class="desc">${p.n_changed} params changed · ${p.id}</div>
+    </div>`).join('');
+}
+async function selectProfile(id){
+  STATE.selectedProfileId = id;
+  renderProfiles();
+  const r = await fetch(`/api/calibration/profiles/${id}`);
+  const profile = await r.json();
+  document.getElementById('selected-profile-name').textContent = profile.name;
+  renderParams(profile);
+}
+async function renderParams(profile){
+  const r = await fetch('/api/calibration/params/defaults');
+  const d = (await r.json()).values;
+  const el = document.getElementById('params-list');
+  el.innerHTML = '';
+  Object.keys(profile.values||{}).forEach(name=>{
+    const dv = d[name] ?? 0, cv = profile.values[name];
+    const changed = Math.abs(cv-dv) > 1e-6;
+    el.innerHTML += `<div class="param-row ${changed?'changed':''}">
+      <span class="name">${name}</span>
+      <span class="dflt">${dv.toFixed(4)}</span>
+      <span class="curr">${cv.toFixed(4)}</span>
+    </div>`;
+  });
+}
+async function newProfile(){
+  const name = prompt('Profile name:', 'New Profile');
+  if(!name) return;
+  await fetch('/api/calibration/profiles', {method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, description:''})});
+  await loadProfiles();
+}
+async function duplicateProfile(){
+  if(!STATE.selectedProfileId) return;
+  const name = prompt('New name:');
+  if(!name) return;
+  await fetch(`/api/calibration/profiles/${STATE.selectedProfileId}/duplicate`,
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  loadProfiles();
+}
+async function deleteProfile(){
+  if(!STATE.selectedProfileId) return;
+  if(!confirm('Delete this profile?')) return;
+  await fetch(`/api/calibration/profiles/${STATE.selectedProfileId}`,{method:'DELETE'});
+  STATE.selectedProfileId = null;
+  loadProfiles();
+}
+async function loadWells(){
+  const r = await fetch('/api/calibration/wells');
+  const d = await r.json();
+  STATE.wells = d.wells || [];
+  document.getElementById('wells-list').innerHTML = STATE.wells.map(w=>
+    `<div class="stat"><span class="k">${w.well_id}</span><span class="v">${w.md_ft.toFixed(0)} ft</span></div>`).join('');
+}
+async function runSelected(){
+  if(!STATE.selectedProfileId){alert('Select a profile first');return;}
+  await fetch('/api/calibration/run',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({profile_id: STATE.selectedProfileId})});
+  loadRuns();
+}
+async function loadRuns(){
+  const r = await fetch('/api/calibration/runs');
+  const d = await r.json();
+  STATE.runs = d.runs || [];
+  renderRuns();
+  renderComparison();
+}
+async function clearRuns(){
+  await fetch('/api/calibration/runs',{method:'DELETE'});
+  STATE.runs = []; renderRuns(); renderComparison();
+}
+function renderRuns(){
+  const el = document.getElementById('runs-list');
+  if(!STATE.runs.length){el.innerHTML='<div style="color:var(--muted);font-size:11px;padding:20px;text-align:center">No runs yet.</div>';return;}
+  const best = STATE.runs.reduce((a,b)=>a.overall_score<b.overall_score?a:b);
+  el.innerHTML = STATE.runs.map(run=>`
+    <div class="run-card ${run.run_id===best.run_id?'best':''}">
+      <div class="run-id">${run.run_id} — ${run.profile.name}</div>
+      <div class="score">${run.overall_score.toFixed(5)}</div>
+      <div style="font-size:10px;color:var(--muted)">${run.n_wells} wells · ${run.duration_s.toFixed(2)}s</div>
+    </div>`).join('');
+}
+function renderComparison(){
+  const el = document.getElementById('comparison-summary');
+  if(!STATE.runs.length){el.textContent='—';return;}
+  const sorted = [...STATE.runs].sort((a,b)=>a.overall_score-b.overall_score);
+  el.innerHTML = `<table><thead><tr><th>Profile</th><th>Score</th><th>Wells</th></tr></thead><tbody>
+    ${sorted.map((r,i)=>`<tr class="${i===0?'best-row':''}"><td>${r.profile.name}</td><td>${r.overall_score.toFixed(5)}</td><td>${r.n_wells}</td></tr>`).join('')}
+  </tbody></table>`;
+  const best = sorted[0];
+  const pw = document.getElementById('per-well-results');
+  pw.innerHTML = `<table><thead><tr><th>Well</th><th>Comp</th><th>dBHP</th><th>dECD</th></tr></thead><tbody>
+    ${(best.well_targets||[]).map(t=>`<tr><td>${t.well_id}</td><td>${(t.composite||0).toFixed(4)}</td><td>${(t.e_bhp_psi||0).toFixed(1)}</td><td>${(t.e_ecd_ppg||0).toFixed(4)}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+window.addEventListener('load',()=>{loadProfiles();loadWells();loadRuns();});
+</script>
+</body>
+</html>

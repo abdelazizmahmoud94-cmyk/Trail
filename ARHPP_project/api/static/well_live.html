@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Live Wellbore</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--sev-info:#38bdf8;--sev-warn:#fbbf24;--sev-high:#f97316;--sev-critical:#ef4444;--state-cleared:#10b981;--state-fp:#64748b;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:1fr 380px;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+.stats{display:flex;gap:16px;font-size:11px}
+.stat-badge{padding:4px 10px;border-radius:12px;background:#1e293b;border:1px solid #334155}
+.stat-badge.critical{background:rgba(239,68,68,.2);border-color:#ef4444;color:#fca5a5}
+.stat-badge.open{background:rgba(251,191,36,.2);border-color:#fbbf24;color:#fcd34d}
+.stat-badge.cleared{background:rgba(16,185,129,.2);border-color:#10b981;color:#6ee7b7}
+.main{padding:12px;overflow:hidden;display:grid;grid-template-columns:60px 1fr 240px;gap:12px;height:100%}
+.depth-axis{background:var(--panel);border-radius:6px;position:relative;overflow:hidden}
+.depth-axis-labels{position:absolute;right:6px;top:0;font-family:monospace;font-size:10px;color:var(--muted);text-align:right}
+.depth-axis-labels .tick{position:absolute;right:0;transform:translateY(-50%)}
+.well-canvas-wrap{background:var(--panel);border-radius:6px;position:relative;overflow:hidden}
+#well-canvas{width:100%;height:100%;display:block;cursor:crosshair}
+.legend-panel{background:var(--panel);border-radius:6px;padding:12px;overflow-y:auto}
+.legend-panel h4{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #334155}
+.legend-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.legend-dot.critical{background:var(--sev-critical)}
+.legend-dot.high{background:var(--sev-high)}
+.legend-dot.warning{background:var(--sev-warn)}
+.legend-dot.info{background:var(--sev-info)}
+.legend-dot.cleared{background:transparent;border:2px solid var(--state-cleared)}
+.side{background:var(--panel);border-left:1px solid #334155;display:flex;flex-direction:column;overflow:hidden}
+.side-header{padding:12px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
+.side-header h3{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.btn-sm{padding:4px 10px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);background:transparent;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.btn-sm:hover{background:var(--accent);color:#0f172a}
+.filters{padding:8px 12px;border-bottom:1px solid #334155;display:flex;flex-wrap:wrap;gap:6px}
+.filter-chip{padding:3px 10px;border-radius:12px;background:var(--panel2);border:1px solid #334155;font-size:10px;cursor:pointer;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.filter-chip.active{background:var(--accent);color:#0f172a;border-color:var(--accent)}
+.feedback-log{flex:1;overflow-y:auto;padding:8px}
+.log-entry{background:var(--panel2);border-radius:4px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--muted);cursor:pointer;transition:all .15s}
+.log-entry:hover{background:#2f3e52}
+.log-entry.sev-warning{border-left-color:var(--sev-warn)}
+.log-entry.sev-high{border-left-color:var(--sev-high)}
+.log-entry.sev-critical{border-left-color:var(--sev-critical)}
+.log-entry.cleared{opacity:.55}
+.log-header{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}
+.log-title{font-weight:700;font-size:12px;margin-bottom:3px}
+.log-detail{font-size:10px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;text-transform:uppercase}
+.badge.ACTIVE{background:var(--sev-warn);color:#0f172a}
+.badge.CLEARED{background:var(--state-cleared);color:#0f172a}
+.badge.RECURRED{background:var(--sev-critical);color:#fff}
+.badge.FALSE_POSITIVE{background:var(--state-fp);color:#fff}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px}
+.tooltip{position:fixed;z-index:1000;background:#0c141f;border:1px solid var(--accent);border-radius:6px;padding:10px 12px;font-size:11px;max-width:300px;display:none;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.6)}
+.tooltip h5{color:var(--accent);font-size:11px;margin-bottom:6px;text-transform:uppercase}
+.tooltip .row{display:flex;gap:8px;padding:2px 0}
+.tooltip .lbl{color:var(--muted);min-width:70px}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#38bdf8;">Live Wellbore</span></h1>
+  <div class="stats" id="header-stats"><span class="stat-badge">Loading...</span></div>
+</header>
+
+<div class="main">
+  <div class="depth-axis"><div class="depth-axis-labels" id="depth-labels"></div></div>
+  <div class="well-canvas-wrap"><canvas id="well-canvas"></canvas></div>
+  <div class="legend-panel">
+    <h4>Severity</h4>
+    <div class="legend-item"><span class="legend-dot critical"></span><span>Critical</span></div>
+    <div class="legend-item"><span class="legend-dot high"></span><span>High</span></div>
+    <div class="legend-item"><span class="legend-dot warning"></span><span>Warning</span></div>
+    <div class="legend-item"><span class="legend-dot info"></span><span>Info</span></div>
+    <div class="legend-item"><span class="legend-dot cleared"></span><span>Cleared</span></div>
+    <h4 style="margin-top:20px">Test Scenarios</h4>
+    <button class="btn-sm" onclick="simulateHighTorque()" style="width:100%">⚠ High Torque</button>
+    <button class="btn-sm" onclick="simulateOverpull()" style="width:100%">⚠ Overpull</button>
+    <button class="btn-sm" onclick="simulateAllCritical()" style="width:100%">🔴 All Critical</button>
+    <button class="btn-sm" onclick="simulateNormal()" style="width:100%">✓ Back to Normal</button>
+    <button class="btn-sm" onclick="resetValues()" style="width:100%">↻ Reset</button>
+    <button class="btn-sm" onclick="clearAllEvents()" style="width:100%">🗑 Clear Events</button>
+  </div>
+</div>
+
+<div class="side">
+  <div class="side-header">
+    <h3>Feedback Timeline</h3>
+    <button class="btn-sm" onclick="clearAllFilters()">All</button>
+  </div>
+  <div class="filters" id="filters">
+    <span class="filter-chip active" data-filter="all" onclick="setFilter('all',this)">All</span>
+    <span class="filter-chip" data-filter="open" onclick="setFilter('open',this)">Open</span>
+    <span class="filter-chip" data-filter="cleared" onclick="setFilter('cleared',this)">Cleared</span>
+  </div>
+  <div class="feedback-log" id="feedback-log"><div class="empty-state">Loading...</div></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const COLORS = {info:'#38bdf8',warning:'#fbbf24',high:'#f97316',critical:'#ef4444',cleared:'#10b981',false_positive:'#64748b'};
+const SEVERITY_RADIUS = {info:4,warning:5,high:6,critical:8};
+const STATE = {schematic:null,events:[],limits:{},filter:'all',canvasRect:null};
+
+async function reload(){
+  try{
+    const r = await fetch('/api/events/schematic');
+    const d = await r.json();
+    STATE.schematic = d;
+    STATE.events = d.events || [];
+    STATE.limits = d.limits || {};
+    updateHeaderStats(d.events_stats);
+    drawSchematic();
+    loadFeedbackLog();
+  }catch(e){console.error(e);}
+}
+
+async function loadFeedbackLog(){
+  try{
+    const r = await fetch('/api/events/feedback?limit=200');
+    const d = await r.json();
+    renderFeedbackLog(d.log || []);
+  }catch(e){}
+}
+
+function updateHeaderStats(s){
+  if(!s)return;
+  const el = document.getElementById('header-stats');
+  const critical = (s.by_severity?.critical||0)+(s.by_severity?.high||0);
+  el.innerHTML = `
+    <span class="stat-badge">Total: ${s.total_events||0}</span>
+    <span class="stat-badge open">Open: ${s.open_events||0}</span>
+    <span class="stat-badge cleared">Cleared: ${s.by_state?.cleared||0}</span>
+    ${critical>0?`<span class="stat-badge critical">Critical: ${critical}</span>`:''}`;
+}
+
+function drawSchematic(){
+  const canvas = document.getElementById('well-canvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = rect.width*dpr; canvas.height = rect.height*dpr;
+  canvas.style.width = rect.width+'px'; canvas.style.height = rect.height+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr);
+  const W = rect.width, H = rect.height;
+  STATE.canvasRect = {W,H};
+  ctx.clearRect(0,0,W,H);
+  if(!STATE.schematic)return;
+  const s = STATE.schematic;
+  const maxDepth = (s.total_depth_ft||15000)+200;
+  const yOf = md => (md/maxDepth)*(H-20)+10;
+
+  ctx.globalAlpha = 0.12;
+  for(const f of s.formations||[]){
+    const y1 = yOf(f.top_md), y2 = yOf(f.bottom_md);
+    ctx.fillStyle = f.color||'#546e7a';
+    ctx.fillRect(0,y1,W,y2-y1);
+  }
+  ctx.globalAlpha = 1;
+
+  const cx = W/2, maxW = W*0.55;
+  for(const sec of s.sections||[]){
+    const y1 = yOf(sec.top_md), y2 = yOf(sec.bottom_md);
+    let width = sec.kind==='openhole' ? maxW*(sec.id_in/26.0) : maxW*(sec.od_in/26.0);
+    width = Math.max(width,8);
+    ctx.strokeStyle = sec.color||'#78909c';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx-width/2, y1, width, y2-y1);
+    ctx.fillStyle = (sec.color||'#78909c')+'33';
+    ctx.fillRect(cx-width/2, y1, 3, y2-y1);
+    ctx.fillRect(cx+width/2-3, y1, 3, y2-y1);
+  }
+
+  const bitY = yOf(s.bit_md_ft||0);
+  const bitW = 32;
+  ctx.fillStyle = '#c62828';
+  ctx.beginPath();
+  ctx.moveTo(cx-bitW/2, bitY-22); ctx.lineTo(cx+bitW/2, bitY-22);
+  ctx.lineTo(cx+bitW/2, bitY-6); ctx.lineTo(cx+bitW/4, bitY);
+  ctx.lineTo(cx-bitW/4, bitY); ctx.lineTo(cx-bitW/2, bitY-6); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  drawEventMarkers(ctx, yOf, cx, maxW);
+}
+
+function drawEventMarkers(ctx, yOf, cx, maxW){
+  for(const ev of STATE.events){
+    if(!matchesFilter(ev))continue;
+    const y = yOf(ev.md_ft);
+    const isCleared = ev.state==='cleared';
+    const isFP = ev.state==='false_positive';
+    let color, radius;
+    if(isCleared){color = COLORS.cleared; radius = 5;}
+    else if(isFP){color = COLORS.false_positive; radius = 4;}
+    else {color = COLORS[ev.severity]||COLORS.warning; radius = SEVERITY_RADIUS[ev.severity]||5;}
+    const side = ev.md_ft%2<1 ? -1 : 1;
+    const xOffset = cx + side*(maxW/2+30);
+    const labelX = cx + side*(maxW/2+50);
+
+    ctx.strokeStyle = color+'66'; ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(cx+side*(maxW/2), y); ctx.lineTo(xOffset, y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath(); ctx.arc(xOffset, y, radius, 0, Math.PI*2);
+    if(isCleared){
+      ctx.fillStyle = '#0f172a'; ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xOffset-2, y); ctx.lineTo(xOffset-0.5, y+2); ctx.lineTo(xOffset+2.5, y-2);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5; ctx.stroke();
+      if(ev.severity==='critical'){
+        ctx.strokeStyle = color+'88'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(xOffset, y, radius+4, 0, Math.PI*2); ctx.stroke();
+      }
+    }
+    const short = {high_torque:'TRQ',high_drag:'DRG',overpull:'OVP',buckling:'BCK',vibration:'VIB',high_spp:'SPP'}[ev.event_type]||(ev.event_type||'').substring(0,3).toUpperCase();
+    ctx.fillStyle = color; ctx.font = 'bold 9px monospace';
+    ctx.textAlign = side<0 ? 'right':'left';
+    ctx.fillText(short, labelX, y+3);
+    ev._schematicX = xOffset; ev._schematicY = y;
+  }
+}
+
+function renderFeedbackLog(log){
+  const el = document.getElementById('feedback-log');
+  if(!log.length){el.innerHTML='<div class="empty-state">No events recorded</div>';return;}
+  el.innerHTML = log.map(e=>{
+    const date = new Date(e.timestamp*1000);
+    const timeStr = date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const isCleared = e.is_terminal;
+    return `<div class="log-entry sev-${e.severity} ${isCleared?'cleared':''}" onclick="focusEvent('${e.event_id}')">
+      <div class="log-header"><span>${e.kind}</span><span>${timeStr}</span></div>
+      <div class="log-title">${e.note||e.event_type}</div>
+      <div class="log-detail">
+        <div>Depth: <b>${e.md_ft.toFixed(0)} ft</b></div>
+        <div>Value: <b>${(e.value||0).toFixed(1)} ${e.unit||''}</b></div>
+        <div>State: <span class="badge ${e.state.toUpperCase()}">${e.state}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function matchesFilter(ev){
+  if(STATE.filter==='all')return true;
+  if(STATE.filter==='open')return ev.is_open;
+  if(STATE.filter==='cleared')return ev.state==='cleared';
+  return ev.event_type===STATE.filter;
+}
+function setFilter(f, el){
+  STATE.filter = f;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  drawSchematic();
+}
+function clearAllFilters(){
+  STATE.filter = 'all';
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.toggle('active',c.dataset.filter==='all'));
+  drawSchematic();
+}
+
+async function pushLiveValues(values){
+  try{
+    await fetch('/api/limits/feed_batch',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({values, md_ft:STATE.schematic?.bit_md_ft||15690, tvd_ft:STATE.schematic?.bit_md_ft||15690, operation:'drilling_rotary'})});
+    await reload();
+  }catch(e){console.error(e);}
+}
+async function simulateHighTorque(){await pushLiveValues({surface_torque_ftlb:26000});}
+async function simulateOverpull(){await pushLiveValues({hookload_klb:560, overpull_klb:120});}
+async function simulateAllCritical(){await pushLiveValues({surface_torque_ftlb:29000,hookload_klb:590,spp_psi:6200,vibration_g:5.0});}
+async function simulateNormal(){await pushLiveValues({surface_torque_ftlb:18000,hookload_klb:320,overpull_klb:0,spp_psi:3400,vibration_g:1.2});}
+async function resetValues(){await pushLiveValues({surface_torque_ftlb:18000,hookload_klb:320,spp_psi:3400,sbp_psi:250,bhp_psi:9500,ecd_ppg:13.2,wob_klb:25,rpm:120,drag_klb:15,overpull_klb:0,vibration_g:1.2,compression_klb:5});}
+async function clearAllEvents(){if(!confirm('Clear all events?'))return; await fetch('/api/events/reset',{method:'POST'}); await reload();}
+function focusEvent(id){
+  const ev = STATE.events.find(e=>e.event_id===id);
+  if(!ev||!ev._schematicX)return;
+  const canvas = document.getElementById('well-canvas');
+  const ctx = canvas.getContext('2d');
+  let alpha = 1.0;
+  const pulse = () => {
+    ctx.strokeStyle = `rgba(56,189,248,${alpha})`;
+    ctx.lineWidth = 3; ctx.beginPath();
+    ctx.arc(ev._schematicX, ev._schematicY, 15, 0, Math.PI*2); ctx.stroke();
+    alpha -= 0.05;
+    if(alpha>0) requestAnimationFrame(pulse); else drawSchematic();
+  };
+  pulse();
+}
+
+document.getElementById('well-canvas').addEventListener('mousemove', e=>{
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+  let hovered = null;
+  for(const ev of STATE.events){
+    if(!ev._schematicX)continue;
+    const dx = mx-ev._schematicX, dy = my-ev._schematicY;
+    if(dx*dx+dy*dy<144){hovered = ev; break;}
+  }
+  const tip = document.getElementById('tooltip');
+  if(hovered){
+    const date = new Date(hovered.detected_at*1000);
+    tip.innerHTML = `<h5>${hovered.event_type.replace(/_/g,' ').toUpperCase()}</h5>
+      <div class="row"><span class="lbl">Depth:</span><span>${hovered.md_ft.toFixed(0)} ft</span></div>
+      <div class="row"><span class="lbl">Value:</span><span>${(hovered.value||0).toFixed(1)}</span></div>
+      <div class="row"><span class="lbl">Severity:</span><span style="color:${COLORS[hovered.severity]}">${hovered.severity.toUpperCase()}</span></div>
+      <div class="row"><span class="lbl">State:</span><span>${hovered.state}</span></div>
+      <div class="row"><span class="lbl">Detected:</span><span>${date.toLocaleString()}</span></div>`;
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX+15)+'px';
+    tip.style.top = (e.clientY+15)+'px';
+  } else {tip.style.display = 'none';}
+});
+document.getElementById('well-canvas').addEventListener('mouseleave', ()=>{document.getElementById('tooltip').style.display='none';});
+
+window.addEventListener('load',()=>{reload(); setInterval(reload,5000);});
+window.addEventListener('resize',()=>drawSchematic());
+</script>
+</body>
+</html>

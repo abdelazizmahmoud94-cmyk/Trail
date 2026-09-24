@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Mechanics Limits</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;--purple:#a78bfa;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+header .profile-badge{background:var(--purple);color:#0f172a;padding:4px 12px;border-radius:12px;font-weight:700;text-transform:uppercase;font-size:11px}
+aside{background:var(--panel);border-right:1px solid #334155;padding:16px;overflow-y:auto}
+aside h3{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #334155}
+aside h3:first-child{margin-top:0}
+.profile-item{background:var(--panel2);border-radius:4px;padding:8px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.profile-item:hover{background:#2f3e52}
+.profile-item.active{background:#0c4a6e;border-left-color:var(--accent)}
+.profile-item .name{font-weight:700;font-size:12px;display:flex;justify-content:space-between}
+.profile-item .name .builtin{font-size:9px;color:var(--purple);font-weight:400;text-transform:uppercase}
+.profile-item .desc{font-size:10px;color:var(--muted);margin-top:3px}
+.btn{display:block;width:100%;text-align:center;padding:8px 12px;margin-bottom:6px;background:var(--accent);color:#0f172a;border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#4de0ff}
+.btn.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+main{padding:16px;overflow-y:auto}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.toolbar h2{font-size:14px;color:var(--accent);text-transform:uppercase;letter-spacing:1px}
+.toolbar .actions{display:flex;gap:8px}
+.toolbar .btn{display:inline-block;width:auto;padding:6px 14px;margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:var(--panel);border-radius:6px;padding:14px;border:1px solid #334155;transition:all .2s}
+.card.dirty{border-color:var(--warn)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.card-title{font-size:13px;font-weight:700}
+.card-title .unit{font-size:10px;color:var(--muted);font-weight:400;margin-left:4px}
+.card-title .direction{display:inline-block;padding:1px 6px;font-size:9px;border-radius:8px;background:var(--panel2);color:var(--muted);margin-left:6px;font-weight:400;text-transform:uppercase}
+.card-live{text-align:right}
+.card-live .value{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ok)}
+.card-live .value.warning{color:var(--warn)}
+.card-live .value.critical{color:var(--danger)}
+.card-live .status{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.range-bar{position:relative;height:24px;background:linear-gradient(90deg,rgba(16,185,129,.15) 0%,rgba(16,185,129,.15) var(--ok-pct),rgba(245,158,11,.2) var(--ok-pct),rgba(245,158,11,.2) var(--warn-pct),rgba(239,68,68,.25) var(--warn-pct),rgba(239,68,68,.25) 100%);border-radius:4px;border:1px solid #334155;overflow:hidden;margin:10px 0}
+.range-bar::after{content:'';position:absolute;top:0;bottom:0;width:2px;background:var(--accent);left:var(--live-pct,0%);box-shadow:0 0 6px var(--accent)}
+.range-markers{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.range-markers .marker.ok{color:var(--ok)}
+.range-markers .marker.warn{color:var(--warn)}
+.range-markers .marker.crit{color:var(--danger)}
+.card-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.input-group{display:flex;flex-direction:column;gap:3px}
+.input-group label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.input-group input{background:#0a0e1a;color:var(--text);border:1px solid #334155;border-radius:3px;padding:5px 8px;font-size:11px;font-family:'SF Mono',Menlo,monospace;width:100%}
+.input-group input:focus{outline:none;border-color:var(--accent)}
+.preset-row{display:flex;gap:4px;margin-top:8px}
+.preset-btn{flex:1;padding:4px 6px;background:var(--panel2);color:var(--muted);border:1px solid #334155;border-radius:3px;font-size:9px;cursor:pointer;text-transform:uppercase;font-weight:700}
+.preset-btn:hover{background:#334155;color:var(--text)}
+.save-bar{position:fixed;bottom:0;left:260px;right:0;background:var(--panel);border-top:1px solid #334155;padding:12px 20px;display:none;justify-content:space-between;align-items:center;z-index:10}
+.save-bar.visible{display:flex}
+.save-bar .msg{color:var(--warn);font-size:12px}
+.save-bar .actions{display:flex;gap:8px}
+.save-bar .btn{width:auto;padding:8px 20px;margin:0}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.visible{display:flex}
+.modal{background:var(--panel);border-radius:8px;padding:24px;max-width:480px;width:90%;border:1px solid var(--accent)}
+.modal h3{color:var(--accent);margin-bottom:16px}
+.modal label{display:block;font-size:11px;color:var(--muted);margin:12px 0 4px;text-transform:uppercase}
+.modal input, .modal textarea{width:100%;background:#0a0e1a;color:var(--text);border:1px solid #334155;border-radius:4px;padding:8px 12px;font-size:12px;font-family:inherit}
+.modal textarea{resize:vertical;min-height:60px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal .btn{width:auto;padding:8px 20px;margin:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#38bdf8;">Mechanical Limits</span></h1>
+  <div style="display:flex;gap:12px;align-items:center;font-size:11px">
+    <span style="color:var(--muted)">Active Profile:</span>
+    <span class="profile-badge" id="active-profile-name">Default</span>
+  </div>
+</header>
+
+<aside>
+  <h3>Profiles</h3>
+  <div id="profiles-list"></div>
+  <button class="btn secondary" onclick="openSaveDialog()" style="margin-top:8px">+ Save as New</button>
+  <h3>Actions</h3>
+  <button class="btn" onclick="saveCurrentProfile()">💾 Save Changes</button>
+  <button class="btn secondary" onclick="revertChanges()">↻ Revert</button>
+  <button class="btn secondary" onclick="resetToDefaults()">⚙ Reset to Defaults</button>
+  <button class="btn danger" onclick="deleteCurrentProfile()">🗑 Delete Profile</button>
+  <h3>Simulator</h3>
+  <button class="btn secondary" onclick="toggleSimulator()" id="sim-btn">▶ Start Feed</button>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <h2>Live Limits Configuration</h2>
+    <div class="actions">
+      <button class="btn secondary" onclick="reloadAll()">↻ Reload</button>
+    </div>
+  </div>
+  <div class="grid" id="cards-grid"></div>
+</main>
+
+<div class="save-bar" id="save-bar">
+  <span class="msg">⚠ Unsaved changes</span>
+  <div class="actions">
+    <button class="btn secondary" onclick="revertChanges()">Cancel</button>
+    <button class="btn" onclick="saveCurrentProfile()">Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="save-dialog">
+  <div class="modal">
+    <h3>Save Profile</h3>
+    <label>Name</label>
+    <input type="text" id="save-name" placeholder="e.g. Kuwait Land Q4">
+    <label>Description</label>
+    <textarea id="save-desc"></textarea>
+    <div class="actions">
+      <button class="btn secondary" onclick="closeSaveDialog()">Cancel</button>
+      <button class="btn" onclick="confirmSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATE = {profiles:[],activeProfile:null,limits:{},originalLimits:{},liveValues:{},hasChanges:false,simulatorRunning:false,simTimer:null};
+const SIM_BASELINE = {surface_torque_ftlb:18000,hookload_klb:320,spp_psi:3400,sbp_psi:250,bhp_psi:9500,ecd_ppg:13.2,wob_klb:25,rpm:120,drag_klb:15,overpull_klb:0,vibration_g:1.2,compression_klb:5};
+
+async function fetchProfiles(){
+  const r = await fetch('/api/limits/profiles');
+  STATE.profiles = (await r.json()).profiles || [];
+  renderProfiles();
+}
+async function fetchActiveProfile(){
+  const r = await fetch('/api/limits/active');
+  const d = await r.json();
+  STATE.activeProfile = d.active_profile || 'Default';
+  STATE.limits = d.limits || {};
+  STATE.originalLimits = JSON.parse(JSON.stringify(STATE.limits));
+  STATE.hasChanges = false;
+  document.getElementById('active-profile-name').textContent = STATE.activeProfile;
+  renderCards();
+  updateSaveBar();
+}
+async function fetchLiveValues(){
+  const r = await fetch('/api/limits/live_values');
+  STATE.liveValues = (await r.json()).values || {};
+  updateLiveValues();
+}
+async function activateProfile(name){
+  if(STATE.hasChanges && !confirm('Discard unsaved changes?'))return;
+  await fetch('/api/limits/activate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  await fetchActiveProfile();
+  renderProfiles();
+}
+async function saveProfileChanges(name, desc){
+  const r = await fetch('/api/limits/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,description:desc,limits:STATE.limits})});
+  return await r.json();
+}
+async function deleteProfileAPI(name){
+  await fetch(`/api/limits/profiles/${encodeURIComponent(name)}`,{method:'DELETE'});
+  await fetchProfiles();
+}
+async function resetToDefaultsAPI(){
+  await fetch('/api/limits/reset_defaults',{method:'POST'});
+  await fetchActiveProfile();
+}
+
+function renderProfiles(){
+  const el = document.getElementById('profiles-list');
+  if(!STATE.profiles.length){el.innerHTML='<div style="color:var(--muted);font-size:11px">No profiles</div>';return;}
+  el.innerHTML = STATE.profiles.map(p=>`
+    <div class="profile-item ${p.name===STATE.activeProfile?'active':''}" onclick="activateProfile('${p.name}')">
+      <div class="name"><span>${p.name}</span>${p.is_builtin?'<span class="builtin">Builtin</span>':''}</div>
+      <div class="desc">${p.description||'—'}</div>
+    </div>`).join('');
+}
+function renderCards(){
+  const el = document.getElementById('cards-grid');
+  const entries = Object.entries(STATE.limits);
+  if(!entries.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No limits loaded</div>';return;}
+  el.innerHTML = entries.map(([k,l])=>renderCard(k,l)).join('');
+}
+function renderCard(key, l){
+  const live = STATE.liveValues[l.param_name] ?? 0;
+  const zone = classify(live, l);
+  const okPct = 100 * l.normal_max / l.critical_max;
+  const warnPct = 100 * l.warning_max / l.critical_max;
+  const livePct = Math.min(100, 100 * live / l.critical_max);
+  const dir = l.direction==='both' ? 'HIGH+LOW' : l.direction==='low' ? 'LOW' : 'HIGH';
+  return `<div class="card" data-param="${l.param_name}">
+    <div class="card-header">
+      <div><div class="card-title">${l.display_name}<span class="unit">${l.unit}</span><span class="direction">${dir}</span></div></div>
+      <div class="card-live">
+        <div class="value ${zone!=='normal'?zone:''}">${live.toFixed(1)}</div>
+        <div class="status">${zone}</div>
+      </div>
+    </div>
+    <div class="range-bar" style="--ok-pct:${okPct}%;--warn-pct:${warnPct}%;--live-pct:${livePct}%"></div>
+    <div class="range-markers">
+      <span class="marker">0</span>
+      <span class="marker ok">normal ≤ ${l.normal_max.toFixed(0)}</span>
+      <span class="marker warn">warn ≤ ${l.warning_max.toFixed(0)}</span>
+      <span class="marker crit">crit ≤ ${l.critical_max.toFixed(0)}</span>
+    </div>
+    <div class="card-inputs">
+      <div class="input-group"><label>Normal Max</label><input type="number" value="${l.normal_max}" onchange="updateLimit('${l.param_name}','normal_max',this.value)"></div>
+      <div class="input-group"><label>Warn %</label><input type="number" step="0.01" value="${l.warning_pct}" onchange="updateLimit('${l.param_name}','warning_pct',this.value)"></div>
+      <div class="input-group"><label>Crit %</label><input type="number" step="0.01" value="${l.critical_pct}" onchange="updateLimit('${l.param_name}','critical_pct',this.value)"></div>
+    </div>
+    <div class="preset-row">
+      <button class="preset-btn" onclick="applyPreset('${l.param_name}',0.05,0.15)">Tight</button>
+      <button class="preset-btn" onclick="applyPreset('${l.param_name}',0.10,0.25)">Balanced</button>
+      <button class="preset-btn" onclick="applyPreset('${l.param_name}',0.20,0.50)">Loose</button>
+    </div>
+  </div>`;
+}
+function classify(value, l){
+  if(l.direction==='high'||l.direction==='both'){
+    if(value >= l.critical_max) return 'critical';
+    if(value >= l.warning_max) return 'warning';
+  }
+  if(l.direction==='low'||l.direction==='both'){
+    if(value <= l.critical_min) return 'critical';
+    if(value <= l.warning_min) return 'warning';
+  }
+  return 'normal';
+}
+function updateLimit(p,f,v){
+  const l = STATE.limits[p]; if(!l)return;
+  const n = parseFloat(v); if(isNaN(n))return;
+  l[f] = n;
+  l.warning_max = l.normal_max*(1+l.warning_pct);
+  l.critical_max = l.normal_max*(1+l.critical_pct);
+  STATE.hasChanges = true;
+  const card = document.querySelector(`[data-param="${p}"]`);
+  if(card) card.outerHTML = renderCard(p, l);
+  updateSaveBar();
+}
+function applyPreset(p, wp, cp){
+  const l = STATE.limits[p]; if(!l)return;
+  l.warning_pct = wp; l.critical_pct = cp;
+  l.warning_max = l.normal_max*(1+wp);
+  l.critical_max = l.normal_max*(1+cp);
+  STATE.hasChanges = true;
+  const card = document.querySelector(`[data-param="${p}"]`);
+  if(card) card.outerHTML = renderCard(p, l);
+  updateSaveBar();
+}
+function updateLiveValues(){
+  for(const [k,l] of Object.entries(STATE.limits)){
+    const live = STATE.liveValues[l.param_name] ?? 0;
+    const zone = classify(live, l);
+    const card = document.querySelector(`[data-param="${l.param_name}"]`);
+    if(!card)continue;
+    const vEl = card.querySelector('.value');
+    const sEl = card.querySelector('.status');
+    if(vEl){vEl.textContent = live.toFixed(1); vEl.className = 'value'+(zone!=='normal'?' '+zone:'');}
+    if(sEl) sEl.textContent = zone;
+    const bar = card.querySelector('.range-bar');
+    if(bar) bar.style.setProperty('--live-pct', Math.min(100, 100*live/l.critical_max) + '%');
+  }
+}
+function updateSaveBar(){document.getElementById('save-bar').classList.toggle('visible', STATE.hasChanges);}
+
+async function saveCurrentProfile(){if(!STATE.activeProfile)return; await saveProfileChanges(STATE.activeProfile,''); await fetchProfiles(); await fetchActiveProfile();}
+async function revertChanges(){STATE.limits = JSON.parse(JSON.stringify(STATE.originalLimits)); STATE.hasChanges = false; renderCards(); updateSaveBar();}
+async function resetToDefaults(){if(!confirm('Reset to defaults?'))return; await resetToDefaultsAPI();}
+async function deleteCurrentProfile(){
+  if(!STATE.activeProfile)return;
+  if(STATE.activeProfile==='Default'){alert('Cannot delete Default');return;}
+  if(!confirm(`Delete "${STATE.activeProfile}"?`))return;
+  await deleteProfileAPI(STATE.activeProfile);
+  await activateProfile('Default');
+}
+function openSaveDialog(){document.getElementById('save-dialog').classList.add('visible'); document.getElementById('save-name').value=''; document.getElementById('save-desc').value='';}
+function closeSaveDialog(){document.getElementById('save-dialog').classList.remove('visible');}
+async function confirmSave(){
+  const n = document.getElementById('save-name').value.trim();
+  const d = document.getElementById('save-desc').value.trim();
+  if(!n){alert('Name required');return;}
+  await saveProfileChanges(n, d);
+  closeSaveDialog();
+  await fetchProfiles();
+  await activateProfile(n);
+}
+async function reloadAll(){await fetchProfiles(); await fetchActiveProfile();}
+
+function toggleSimulator(){
+  if(STATE.simulatorRunning){
+    clearInterval(STATE.simTimer);
+    STATE.simulatorRunning = false;
+    document.getElementById('sim-btn').textContent = '▶ Start Feed';
+  } else {
+    STATE.simulatorRunning = true;
+    document.getElementById('sim-btn').textContent = '⏸ Stop Feed';
+    STATE.simTimer = setInterval(tickSimulator, 1500);
+  }
+}
+function tickSimulator(){
+  const noise = (v,p) => v * (1 + (Math.random()-0.5)*2*p);
+  STATE.liveValues = {
+    surface_torque_ftlb: noise(SIM_BASELINE.surface_torque_ftlb, 0.08),
+    hookload_klb: noise(SIM_BASELINE.hookload_klb, 0.05),
+    spp_psi: noise(SIM_BASELINE.spp_psi, 0.06),
+    sbp_psi: noise(SIM_BASELINE.sbp_psi, 0.10),
+    bhp_psi: noise(SIM_BASELINE.bhp_psi, 0.03),
+    ecd_ppg: noise(SIM_BASELINE.ecd_ppg, 0.02),
+    wob_klb: noise(SIM_BASELINE.wob_klb, 0.15),
+    rpm: noise(SIM_BASELINE.rpm, 0.04),
+    drag_klb: noise(SIM_BASELINE.drag_klb, 0.20),
+    overpull_klb: Math.max(0, noise(SIM_BASELINE.overpull_klb, 3.0)),
+    vibration_g: noise(SIM_BASELINE.vibration_g, 0.40),
+    compression_klb: noise(SIM_BASELINE.compression_klb, 0.30),
+  };
+  updateLiveValues();
+}
+
+window.addEventListener('load',async()=>{await fetchProfiles(); await fetchActiveProfile(); await fetchLiveValues(); setInterval(fetchLiveValues, 3000);});
+document.getElementById('save-dialog').addEventListener('click',e=>{if(e.target.id==='save-dialog')closeSaveDialog();});
+</script>
+</body>
+</html>

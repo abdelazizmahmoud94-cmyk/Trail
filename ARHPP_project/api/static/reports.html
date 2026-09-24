@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Reports</title>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--ok:#10b981;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:260px 1fr;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+aside{background:var(--panel);padding:16px;border-right:1px solid #334155;overflow-y:auto}
+main{padding:20px;overflow-y:auto}
+.report-btn{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;background:var(--panel2);border:1px solid #334155;border-radius:6px;color:var(--text);cursor:pointer;font-size:12px;transition:all .15s}
+.report-btn:hover{background:#2f3e52;border-color:var(--accent)}
+.report-btn.active{background:#0c4a6e;border-color:var(--accent)}
+.report-btn .icon{font-size:18px;margin-right:8px}
+.report-btn .name{font-weight:700}
+.report-btn .desc{font-size:10px;color:var(--muted);margin-top:2px}
+h2{color:var(--accent);font-size:14px;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;border-bottom:1px solid #334155;margin-bottom:16px}
+h3{color:var(--accent);font-size:12px;margin:20px 0 10px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:6px;overflow:hidden;margin-bottom:16px}
+th{background:#0c4a6e;padding:10px;text-align:left;color:#bae6fd;font-size:11px;text-transform:uppercase}
+td{padding:8px 10px;border-bottom:1px solid #334155;font-size:12px}
+tr:hover{background:#273449}
+.export-row{display:flex;gap:8px;margin-bottom:20px}
+.export-btn{padding:8px 16px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);background:transparent;cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase}
+.export-btn:hover{background:var(--accent);color:#0f172a}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#38bdf8;">Reports</span></h1>
+  <span id="status" style="color:#bae6fd;font-size:11px">Ready</span>
+</header>
+
+<aside>
+  <h3 style="color:var(--accent);font-size:11px;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Report Types</h3>
+  <button class="report-btn active" onclick="gen('daily',this)"><span class="icon">📋</span><span class="name">Daily Report</span><div class="desc">Daily drilling summary</div></button>
+  <button class="report-btn" onclick="gen('influx',this)"><span class="icon">⚠️</span><span class="name">Influx Report</span><div class="desc">Kick detection & response</div></button>
+  <button class="report-btn" onclick="gen('operations',this)"><span class="icon">🕐</span><span class="name">Operations Log</span><div class="desc">Timeline of activities</div></button>
+  <button class="report-btn" onclick="gen('maintenance',this)"><span class="icon">🔧</span><span class="name">Maintenance</span><div class="desc">Equipment & sensors</div></button>
+  <button class="report-btn" onclick="gen('calibration',this)"><span class="icon">⚙️</span><span class="name">Calibration</span><div class="desc">Model calibration</div></button>
+</aside>
+
+<main>
+  <div id="content"><div class="empty-state">Select a report type from the left</div></div>
+</main>
+
+<script>
+async function gen(type, btn){
+  document.querySelectorAll('.report-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('status').textContent = 'Generating...';
+  try{
+    const r = await fetch(`/api/reports/${type}`, {method:'POST'});
+    const d = await r.json();
+    render(d);
+    document.getElementById('status').textContent = `Generated: ${new Date().toLocaleTimeString()}`;
+  }catch(e){
+    document.getElementById('status').textContent = 'Error';
+    document.getElementById('content').innerHTML = `<div class="empty-state">Failed: ${e.message}</div>`;
+  }
+}
+
+function render(report){
+  let html = `<h2>${report.report_type||'Report'}</h2>`;
+  html += `<div class="export-row">
+    <button class="export-btn" onclick="exportReport('json')">📥 JSON</button>
+    <button class="export-btn" onclick="exportReport('csv')">📥 CSV</button>
+    <button class="export-btn" onclick="exportReport('html')">📥 HTML</button>
+    <button class="export-btn" onclick="exportReport('pdf')">📥 PDF</button>
+  </div>`;
+  html += `<p style="color:var(--muted);font-size:11px;margin-bottom:20px">Generated: ${report.generated_at||''}</p>`;
+  for(const s of report.sections||[]){
+    html += `<h3>${s.title}</h3>`;
+    if(s.type==='text'){
+      html += `<p style="margin-bottom:16px">${s.content}</p>`;
+    } else if(s.type==='table'){
+      html += '<table><thead><tr>';
+      for(const h of s.content.headers||[]) html += `<th>${h}</th>`;
+      html += '</tr></thead><tbody>';
+      for(const row of s.content.rows||[]){
+        html += '<tr>';
+        for(const v of row) html += `<td>${v}</td>`;
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+  }
+  document.getElementById('content').innerHTML = html;
+}
+
+async function exportReport(fmt){
+  try{
+    const r = await fetch(`/api/reports/export/${fmt}`,{method:'POST'});
+    const d = await r.json();
+    if(d.path) alert(`Saved: ${d.path}`);
+    else alert(d.error || 'Export failed');
+  }catch(e){alert('Export failed: ' + e.message);}
+}
+
+window.addEventListener('load',()=>{gen('daily',document.querySelector('.report-btn'));});
+</script>
+</body>
+</html>

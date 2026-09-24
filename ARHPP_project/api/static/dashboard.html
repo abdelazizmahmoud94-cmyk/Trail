@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Live Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:220px 1fr;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+header .meta{display:flex;gap:16px;align-items:center;font-size:11px}
+.badge{background:var(--accent);color:#0f172a;padding:4px 12px;border-radius:12px;font-weight:700;text-transform:uppercase;font-size:10px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:pulse 1.5s infinite;display:inline-block;margin-right:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+aside{background:var(--panel);border-right:1px solid #334155;padding:16px;overflow-y:auto}
+aside a{display:block;color:var(--text);text-decoration:none;padding:8px 12px;border-radius:4px;margin-bottom:4px;font-size:12px;font-weight:600;transition:all .15s}
+aside a:hover{background:var(--panel2)}
+aside a.active{background:var(--accent);color:#0f172a}
+h3{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #334155}
+h3:first-child{margin-top:0}
+main{padding:16px;overflow-y:auto}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.tile{background:var(--panel);border-radius:6px;padding:12px;border-left:3px solid var(--accent);transition:border-color .3s}
+.tile .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.tile .val{font-size:22px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.tile .sub{font-size:10px;color:var(--muted);margin-top:2px}
+.tile.ok{border-left-color:var(--ok)}
+.tile.warn{border-left-color:var(--warn)}
+.tile.danger{border-left-color:var(--danger)}
+.chart{background:var(--panel);border-radius:6px;padding:10px;margin-bottom:16px;height:280px}
+.alerts-box{background:var(--panel);border-radius:6px;padding:12px;margin-top:8px;min-height:60px}
+.alerts-box div{color:var(--warn);font-weight:600;margin:4px 0;font-size:12px}
+.side-stats{display:flex;flex-direction:column;gap:6px}
+.side-stat{background:var(--panel2);border-radius:4px;padding:6px 10px;font-size:11px;display:flex;justify-content:space-between}
+.side-stat .k{color:var(--muted)}
+.side-stat .v{font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP <span style="color:#38bdf8;">Live Dashboard</span></h1>
+  <div class="meta">
+    <span><span class="live-dot"></span><span id="ws-status">connecting...</span></span>
+    <span class="badge">v2.0.0</span>
+    <span style="color:#bae6fd;" id="clock">--:--:--</span>
+  </div>
+</header>
+
+<aside>
+  <h3>Navigation</h3>
+  <a href="/" class="active">📊 Dashboard</a>
+  <a href="/calibration">⚙️ Calibration</a>
+  <a href="/trajectory">🛢️ Trajectory</a>
+  <a href="/graphs">📈 Graphs</a>
+  <a href="/well_live">🕳️ Well Live</a>
+  <a href="/mechanics">🔧 Mechanics</a>
+  <a href="/reports">📋 Reports</a>
+
+  <h3>Side Stats</h3>
+  <div class="side-stats" id="side-stats"></div>
+
+  <h3>Alerts</h3>
+  <div class="alerts-box" id="alerts-panel">No alerts</div>
+</aside>
+
+<main>
+  <div class="tiles">
+    <div class="tile" id="t-bhp"><div class="lbl">BHP</div><div class="val" id="v-bhp">—</div><div class="sub">psi</div></div>
+    <div class="tile" id="t-ecd"><div class="lbl">ECD</div><div class="val" id="v-ecd">—</div><div class="sub">ppg</div></div>
+    <div class="tile" id="t-esd"><div class="lbl">ESD</div><div class="val" id="v-esd">—</div><div class="sub">ppg</div></div>
+    <div class="tile" id="t-pp"><div class="lbl">PP (Pore)</div><div class="val" id="v-pp">—</div><div class="sub">ppg</div></div>
+    <div class="tile warn" id="t-fg"><div class="lbl">FG (Frac)</div><div class="val" id="v-fg">—</div><div class="sub">ppg</div></div>
+    <div class="tile" id="t-conf"><div class="lbl">Confidence</div><div class="val" id="v-conf">—</div><div class="sub">%</div></div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile" id="t-qin"><div class="lbl">Q In</div><div class="val" id="v-qin">—</div><div class="sub">gpm</div></div>
+    <div class="tile" id="t-qout"><div class="lbl">Q Out</div><div class="val" id="v-qout">—</div><div class="sub">gpm</div></div>
+    <div class="tile" id="t-qut"><div class="lbl">Q U-Tube</div><div class="val" id="v-qut">—</div><div class="sub">gpm</div></div>
+    <div class="tile" id="t-qloss"><div class="lbl">Q Loss</div><div class="val" id="v-qloss">—</div><div class="sub">gpm</div></div>
+    <div class="tile" id="t-kick"><div class="lbl">Kick Prob</div><div class="val" id="v-kick">—</div><div class="sub">%</div></div>
+    <div class="tile" id="t-risk"><div class="lbl">Overall Risk</div><div class="val" id="v-risk">—</div><div class="sub">status</div></div>
+  </div>
+
+  <div class="chart" id="chart-main"></div>
+  <div class="chart" id="chart-ecd"></div>
+</main>
+
+<script>
+const STATE = {history: [], maxPts: 120, ws: null, connected: false};
+
+function fmt(v,d=2){return Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function setTile(id, cls){document.getElementById(id).className = 'tile ' + (cls||'');}
+
+function update(d){
+  document.getElementById('v-bhp').textContent = fmt(d.bhp||0,0);
+  document.getElementById('v-ecd').textContent = fmt(d.ecd||0,3);
+  document.getElementById('v-esd').textContent = fmt(d.esd||0,3);
+  document.getElementById('v-pp').textContent = fmt(d.pp||0,2);
+  document.getElementById('v-fg').textContent = fmt(d.fg||0,2);
+  document.getElementById('v-conf').textContent = fmt((d.confidence||0)*100,0);
+  document.getElementById('v-qin').textContent = fmt(d.q_in||0,0);
+  document.getElementById('v-qout').textContent = fmt(d.q_out||0,0);
+  document.getElementById('v-qut').textContent = fmt(d.q_utube||0,2);
+  document.getElementById('v-qloss').textContent = fmt(d.q_loss||0,2);
+  document.getElementById('v-kick').textContent = fmt((d.kick_probability||0)*100,0);
+  document.getElementById('v-risk').textContent = d.overall_risk||'NONE';
+
+  const conf = d.confidence||0;
+  setTile('t-conf', conf<0.5?'warn':conf>0.8?'ok':'warn');
+  const kp = d.kick_probability||0;
+  setTile('t-kick', kp>0.5?'danger':kp>0.2?'warn':'ok');
+  setTile('t-risk', d.overall_risk==='HIGH'?'danger':d.overall_risk==='MODERATE'?'warn':'ok');
+  setTile('t-ecd', (d.ecd||0) > ((d.fg||15)-0.3) ? 'danger':'ok');
+  setTile('t-fg', (d.ecd||0) > ((d.fg||15)-0.5) ? 'danger':'');
+
+  document.getElementById('alerts-panel').innerHTML =
+    (d.alerts && d.alerts.length)
+      ? d.alerts.map(a=>`<div>⚠ ${a}</div>`).join('')
+      : 'No alerts';
+
+  document.getElementById('side-stats').innerHTML = `
+    <div class="side-stat"><span class="k">MD</span><span class="v">${fmt(d.bit_md||0,0)} ft</span></div>
+    <div class="side-stat"><span class="k">SPP</span><span class="v">${fmt(d.spp||0,0)} psi</span></div>
+    <div class="side-stat"><span class="k">SBP</span><span class="v">${fmt(d.sbp||0,0)} psi</span></div>
+    <div class="side-stat"><span class="k">MW</span><span class="v">${fmt(d.mw||0,2)} ppg</span></div>
+  `;
+
+  STATE.history.push({
+    t: new Date().toLocaleTimeString(),
+    bhp: d.bhp||0, ecd: d.ecd||0, esd: d.esd||0,
+    pp: d.pp||0, fg: d.fg||0,
+  });
+  if(STATE.history.length>STATE.maxPts) STATE.history.shift();
+  drawCharts();
+}
+
+function drawCharts(){
+  if(STATE.history.length<2) return;
+  const h = STATE.history;
+  const t = h.map(x=>x.t);
+
+  Plotly.react('chart-main', [
+    {x:t, y:h.map(x=>x.bhp), name:'BHP', line:{color:'#38bdf8',width:2}},
+    {x:t, y:h.map(x=>x.ecd*100), name:'ECD×100', line:{color:'#f472b6',width:2}, yaxis:'y2'},
+    {x:t, y:h.map(x=>x.pp*100), name:'PP×100', line:{color:'#4ade80',width:2,dash:'dot'}, yaxis:'y2'},
+    {x:t, y:h.map(x=>x.fg*100), name:'FG×100', line:{color:'#fbbf24',width:2,dash:'dot'}, yaxis:'y2'},
+  ], {
+    paper_bgcolor:'#1e293b',plot_bgcolor:'#1e293b',font:{color:'#cbd5e1',size:10},
+    margin:{l:50,r:50,t:10,b:30},
+    xaxis:{gridcolor:'#334155',title:{text:'time',font:{size:9}}},
+    yaxis:{gridcolor:'#334155',title:{text:'psi',font:{size:9}}},
+    yaxis2:{overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',title:{text:'ppg×100',font:{size:9}}},
+    legend:{orientation:'h',y:-0.15,font:{size:9}},
+  },{displayModeBar:false,responsive:true});
+
+  Plotly.react('chart-ecd', [
+    {x:t, y:h.map(x=>x.ecd), name:'ECD', line:{color:'#10b981',width:2}},
+    {x:t, y:h.map(x=>x.esd), name:'ESD', line:{color:'#22d3ee',width:2}},
+    {x:t, y:h.map(x=>x.pp), name:'PP', line:{color:'#4ade80',width:2,dash:'dot'}},
+    {x:t, y:h.map(x=>x.fg), name:'FG', line:{color:'#fbbf24',width:2,dash:'dot'}},
+  ], {
+    paper_bgcolor:'#1e293b',plot_bgcolor:'#1e293b',font:{color:'#cbd5e1',size:10},
+    margin:{l:50,r:20,t:10,b:30},
+    xaxis:{gridcolor:'#334155'},
+    yaxis:{gridcolor:'#334155',title:{text:'ppg',font:{size:9}}},
+    legend:{orientation:'h',y:-0.15,font:{size:9}},
+  },{displayModeBar:false,responsive:true});
+}
+
+function connect(){
+  try{
+    STATE.ws = new WebSocket(`ws://${location.host}/ws`);
+    STATE.ws.onopen = () => {STATE.connected=true; document.getElementById('ws-status').textContent='live';};
+    STATE.ws.onmessage = (e) => {try{update(JSON.parse(e.data));}catch(err){}};
+    STATE.ws.onerror = () => {document.getElementById('ws-status').textContent='error';};
+    STATE.ws.onclose = () => {STATE.connected=false; document.getElementById('ws-status').textContent='reconnecting'; setTimeout(connect,3000);};
+  }catch(e){setTimeout(connect,3000);}
+}
+
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);
+window.addEventListener('load',()=>{connect();});
+</script>
+</body>
+</html>

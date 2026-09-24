@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARHPP — Trajectory</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root{--bg:#0a0e1a;--panel:#1e293b;--panel2:#273449;--text:#e2e8f0;--muted:#7a869a;--accent:#38bdf8;--ok:#10b981;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:grid;grid-template-columns:220px 1fr;grid-template-rows:52px 1fr}
+header{grid-column:1/-1;background:linear-gradient(90deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #334155}
+header h1{font-size:18px;color:#fff}
+aside{background:var(--panel);padding:16px;border-right:1px solid #334155;overflow-y:auto}
+main{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:#334155}
+.view{background:var(--bg);padding:8px;overflow:hidden}
+.view h3{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.plot{width:100%;height:calc(100% - 24px)}
+.btn{display:block;width:100%;padding:8px 12px;margin-bottom:6px;background:var(--accent);color:#0f172a;border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase}
+.btn.active{background:var(--ok)}
+.btn.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.stat{display:flex;justify-content:space-between;padding:6px 8px;background:var(--panel2);border-radius:4px;margin-bottom:4px;font-size:11px}
+.stat .k{color:var(--muted)}
+.stat .v{font-weight:700}
+h3{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #334155}
+h3:first-child{margin-top:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARHPP — <span style="color:#38bdf8;">Trajectory</span></h1>
+  <span style="color:#bae6fd;font-size:11px" id="md-display">MD: —</span>
+</header>
+
+<aside>
+  <h3>Views</h3>
+  <button class="btn active" onclick="setLayout('2x2',this)">2×2 Grid</button>
+  <button class="btn" onclick="setLayout('3d',this)">3D Only</button>
+  <button class="btn" onclick="setLayout('sections',this)">Sections</button>
+  <h3>Summary</h3>
+  <div id="traj-summary"></div>
+  <h3>Controls</h3>
+  <button class="btn secondary" onclick="loadTrajectory()">↻ Reload</button>
+</aside>
+
+<main id="main-grid">
+  <div class="view"><h3>3D Trajectory</h3><div class="plot" id="plot-3d"></div></div>
+  <div class="view"><h3>Plan View (N vs E)</h3><div class="plot" id="plot-plan"></div></div>
+  <div class="view"><h3>Vertical Section</h3><div class="plot" id="plot-section"></div></div>
+  <div class="view"><h3>North / East vs TVD</h3><div class="plot" id="plot-ne-tvd"></div></div>
+</main>
+
+<script>
+const LAYOUT_BASE = {paper_bgcolor:'#0f172a',plot_bgcolor:'#0f172a',font:{color:'#cbd5e1',size:10},margin:{l:50,r:20,t:10,b:40},showlegend:false};
+const CONFIG = {responsive:true,displayModeBar:false};
+
+async function loadTrajectory(){
+  try{
+    const r = await fetch('/api/viz/trajectory');
+    const d = await r.json();
+    document.getElementById('md-display').textContent = `MD: ${(d.summary?.md_end||0).toFixed(0)} ft`;
+    renderSummary(d.summary);
+    render3D(d.trajectory_3d);
+    renderPlan(d.sections.plan_view);
+    renderVerticalSection(d.sections.vertical_section);
+    renderNEvsTVD(d.sections);
+  }catch(e){console.error(e);}
+}
+
+function renderSummary(s){
+  if(!s)return;
+  document.getElementById('traj-summary').innerHTML = `
+    <div class="stat"><span class="k">MD</span><span class="v">${(s.md_end||0).toFixed(0)} ft</span></div>
+    <div class="stat"><span class="k">TVD</span><span class="v">${(s.tvd_end||0).toFixed(0)} ft</span></div>
+    <div class="stat"><span class="k">Disp</span><span class="v">${(s.displacement_ft||0).toFixed(0)} ft</span></div>
+    <div class="stat"><span class="k">Max Inc</span><span class="v">${(s.max_inc||0).toFixed(1)}°</span></div>
+    <div class="stat"><span class="k">Max DLS</span><span class="v">${(s.max_dls||0).toFixed(2)}°/100ft</span></div>`;
+}
+
+function render3D(t){
+  if(!t||!t.md)return;
+  Plotly.react('plot-3d',[{
+    type:'scatter3d',mode:'lines',
+    x:t.east,y:t.north,z:t.tvd.map(v=>-v),
+    line:{color:'#38bdf8',width:4},
+    hovertemplate:'MD: %{customdata[0]:.0f} ft<br>TVD: %{-z:.0f} ft<br>Inc: %{customdata[1]:.1f}°<extra></extra>',
+    customdata:t.md.map((md,i)=>[md,t.inc[i]]),
+  }],{...LAYOUT_BASE,scene:{
+    bgcolor:'#0f172a',
+    xaxis:{title:'East',gridcolor:'#334155'},
+    yaxis:{title:'North',gridcolor:'#334155'},
+    zaxis:{title:'TVD',gridcolor:'#334155'}}} ,CONFIG);
+}
+
+function renderPlan(p){
+  if(!p)return;
+  Plotly.react('plot-plan',[{type:'scatter',mode:'lines+markers',x:p.x,y:p.y,
+    line:{color:'#22c55e',width:3},marker:{size:4}}],
+    {...LAYOUT_BASE,xaxis:{title:'East (ft)',gridcolor:'#334155'},
+     yaxis:{title:'North (ft)',gridcolor:'#334155',scaleanchor:'x'}},CONFIG);
+}
+
+function renderVerticalSection(vs){
+  if(!vs)return;
+  Plotly.react('plot-section',[{type:'scatter',mode:'lines',x:vs.x,y:vs.y,
+    line:{color:'#f472b6',width:3}}],
+    {...LAYOUT_BASE,xaxis:{title:'Vertical Section (ft)',gridcolor:'#334155'},
+     yaxis:{title:'TVD',gridcolor:'#334155',autorange:'reversed'}},CONFIG);
+}
+
+function renderNEvsTVD(s){
+  if(!s)return;
+  Plotly.react('plot-ne-tvd',[
+    {type:'scatter',mode:'lines',x:s.north_tvd.x,y:s.north_tvd.y,name:'North',line:{color:'#22c55e',width:3}},
+    {type:'scatter',mode:'lines',x:s.east_tvd.x,y:s.east_tvd.y,name:'East',line:{color:'#f59e0b',width:3}},
+  ],{...LAYOUT_BASE,showlegend:true,legend:{orientation:'h',y:-0.15},
+     xaxis:{title:'Distance (ft)',gridcolor:'#334155'},
+     yaxis:{title:'TVD',gridcolor:'#334155',autorange:'reversed'}},CONFIG);
+}
+
+function setLayout(mode, btn){
+  document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const grid = document.getElementById('main-grid');
+  if(mode==='3d'){
+    grid.style.gridTemplateColumns='1fr';
+    grid.style.gridTemplateRows='1fr';
+    document.querySelectorAll('.view').forEach((v,i)=>v.style.display=i===0?'':'none');
+  } else {
+    grid.style.gridTemplateColumns='1fr 1fr';
+    grid.style.gridTemplateRows='1fr 1fr';
+    document.querySelectorAll('.view').forEach(v=>v.style.display='');
+  }
+  setTimeout(()=>document.querySelectorAll('.plot').forEach(el=>el.data&&Plotly.Plots.resize(el)),100);
+}
+
+window.addEventListener('load',()=>{loadTrajectory();setInterval(loadTrajectory,5000);});
+</script>
+</body>
+</html>

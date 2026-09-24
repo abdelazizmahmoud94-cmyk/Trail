@@ -1,0 +1,57 @@
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33m                      [100%][0m
+[33m=============================== warnings summary ===============================[0m
+tests/test_bridge.py::test_bridge_lifecycle
+tests/test_plc.py::test_simulator_lifecycle
+tests/test_plc.py::test_simulator_esd_triggers_safe_mode
+  /mnt/data/ARHPP_project/arhpp/plc/simulator.py:88: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    start_time=datetime.utcnow(),
+
+tests/test_bridge.py: 7 warnings
+tests/test_plc.py: 32 warnings
+  /mnt/data/ARHPP_project/arhpp/plc/simulator.py:306: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    datetime.utcnow() - self._status.start_time
+
+tests/test_bridge.py::test_bridge_arhpp_cache
+  /mnt/data/ARHPP_project/tests/test_bridge.py:29: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow(),
+
+tests/test_calibration.py::test_persist_roundtrip_deprecated
+  /mnt/data/ARHPP_project/tests/test_calibration.py:44: DeprecationWarning: persist.save() is deprecated. Use ProfileLibrary.save().
+    save(vals, p)
+
+tests/test_calibration.py::test_persist_roundtrip_deprecated
+tests/test_calibration.py::test_profile_library_roundtrip
+  /mnt/data/ARHPP_project/arhpp/calibration/profile.py:18: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    default_factory=lambda: datetime.utcnow().isoformat())
+
+tests/test_calibration.py::test_persist_roundtrip_deprecated
+  /mnt/data/ARHPP_project/tests/test_calibration.py:45: DeprecationWarning: persist.load() is deprecated and returns defaults.
+    loaded = load(p)
+
+tests/test_calibration.py::test_profile_library_roundtrip
+  /mnt/data/ARHPP_project/arhpp/calibration/profile.py:89: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    datetime.utcnow().isoformat()),
+
+tests/test_reports.py::test_daily_report
+  /mnt/data/ARHPP_project/arhpp/reports/daily.py:26: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ["Report Date", datetime.utcnow().strftime("%Y-%m-%d")],
+
+tests/test_reports.py::test_daily_report
+  /mnt/data/ARHPP_project/arhpp/reports/daily.py:27: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ["Report Time", datetime.utcnow().strftime("%H:%M:%S")],
+
+tests/test_reports.py::test_daily_report
+  /mnt/data/ARHPP_project/arhpp/reports/daily.py:85: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "generated_at": datetime.utcnow().isoformat()}
+
+tests/test_reports.py::test_influx_report
+  /mnt/data/ARHPP_project/arhpp/reports/influx.py:64: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "generated_at": datetime.utcnow().isoformat()}
+
+tests/test_reports.py::test_operations_report
+  /mnt/data/ARHPP_project/arhpp/reports/operations.py:37: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "generated_at": datetime.utcnow().isoformat()}
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+[33m[32m51 passed[0m, [33m[1m53 warnings[0m[33m in 3.90s[0m[0m
+

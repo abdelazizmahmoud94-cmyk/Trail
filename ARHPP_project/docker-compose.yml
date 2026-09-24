@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  arhpp-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: arhpp:2.0.0
+    container_name: arhpp-api
+    ports:
+      - "8000:8000"
+      - "14200:14200"
+    volumes:
+      - ./excel_input:/app/excel_input
+      - ./calibration.json:/app/calibration.json:ro
+      - arhpp-models:/app/arhpp/ml/models
+    environment:
+      - ARHPP_LOG_LEVEL=INFO
+      - ARHPP_EXCEL_DIR=/app/excel_input
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  arhpp-streamlit:
+    image: arhpp:2.0.0
+    container_name: arhpp-streamlit
+    command: ["streamlit", "run", "api/streamlit_app.py",
+              "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./excel_input:/app/excel_input
+      - arhpp-models:/app/arhpp/ml/models
+    depends_on:
+      - arhpp-api
+    restart: unless-stopped
+
+volumes:
+  arhpp-models:
