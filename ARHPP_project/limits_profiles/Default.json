@@ -1,0 +1,140 @@
+{
+  "created_or_updated_at": "2026-09-24T22:43:39.976889+00:00",
+  "description": "ARHPP built-in mechanical operating limits",
+  "limits": {
+    "bhp_psi": {
+      "critical_pct": 0.15,
+      "direction": "high",
+      "display_name": "BHP",
+      "event_type_name": "high_bhp",
+      "normal_max": 15000.0,
+      "normal_min": 0.0,
+      "param_name": "bhp_psi",
+      "unit": "psi",
+      "warning_pct": 0.05
+    },
+    "compression_klb": {
+      "critical_pct": 0.5,
+      "direction": "high",
+      "display_name": "Axial Compression",
+      "event_type_name": "buckling",
+      "normal_max": 30.0,
+      "normal_min": 0.0,
+      "param_name": "compression_klb",
+      "unit": "klb",
+      "warning_pct": 0.2
+    },
+    "drag_klb": {
+      "critical_pct": 0.5,
+      "direction": "high",
+      "display_name": "Drag",
+      "event_type_name": "high_drag",
+      "normal_max": 60.0,
+      "normal_min": 0.0,
+      "param_name": "drag_klb",
+      "unit": "klb",
+      "warning_pct": 0.2
+    },
+    "ecd_ppg": {
+      "critical_pct": 0.1,
+      "direction": "both",
+      "display_name": "ECD",
+      "event_type_name": "high_ecd",
+      "normal_max": 15.0,
+      "normal_min": 8.0,
+      "param_name": "ecd_ppg",
+      "unit": "ppg",
+      "warning_pct": 0.05
+    },
+    "hookload_klb": {
+      "critical_pct": 0.15,
+      "direction": "high",
+      "display_name": "Hookload",
+      "event_type_name": "overpull",
+      "normal_max": 550.0,
+      "normal_min": 0.0,
+      "param_name": "hookload_klb",
+      "unit": "klb",
+      "warning_pct": 0.05
+    },
+    "overpull_klb": {
+      "critical_pct": 0.75,
+      "direction": "high",
+      "display_name": "Overpull",
+      "event_type_name": "overpull",
+      "normal_max": 80.0,
+      "normal_min": 0.0,
+      "param_name": "overpull_klb",
+      "unit": "klb",
+      "warning_pct": 0.25
+    },
+    "rpm": {
+      "critical_pct": 0.25,
+      "direction": "high",
+      "display_name": "RPM",
+      "event_type_name": "high_rpm",
+      "normal_max": 180.0,
+      "normal_min": 0.0,
+      "param_name": "rpm",
+      "unit": "rpm",
+      "warning_pct": 0.1
+    },
+    "sbp_psi": {
+      "critical_pct": 0.25,
+      "direction": "high",
+      "display_name": "SBP",
+      "event_type_name": "high_sbp",
+      "normal_max": 1500.0,
+      "normal_min": 0.0,
+      "param_name": "sbp_psi",
+      "unit": "psi",
+      "warning_pct": 0.1
+    },
+    "spp_psi": {
+      "critical_pct": 0.25,
+      "direction": "high",
+      "display_name": "SPP",
+      "event_type_name": "high_spp",
+      "normal_max": 5000.0,
+      "normal_min": 0.0,
+      "param_name": "spp_psi",
+      "unit": "psi",
+      "warning_pct": 0.1
+    },
+    "surface_torque_ftlb": {
+      "critical_pct": 0.25,
+      "direction": "high",
+      "display_name": "Surface Torque",
+      "event_type_name": "high_torque",
+      "normal_max": 22000.0,
+      "normal_min": 0.0,
+      "param_name": "surface_torque_ftlb",
+      "unit": "ft-lb",
+      "warning_pct": 0.1
+    },
+    "vibration_g": {
+      "critical_pct": 1.0,
+      "direction": "high",
+      "display_name": "Vibration",
+      "event_type_name": "vibration",
+      "normal_max": 3.0,
+      "normal_min": 0.0,
+      "param_name": "vibration_g",
+      "unit": "g",
+      "warning_pct": 0.33
+    },
+    "wob_klb": {
+      "critical_pct": 0.5,
+      "direction": "high",
+      "display_name": "WOB",
+      "event_type_name": "high_wob",
+      "normal_max": 40.0,
+      "normal_min": 0.0,
+      "param_name": "wob_klb",
+      "unit": "klb",
+      "warning_pct": 0.2
+    }
+  },
+  "name": "Default",
+  "schema_version": 1
+}
